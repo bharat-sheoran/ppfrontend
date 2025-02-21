@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { UserCircle2 } from 'lucide-react';
 
 interface FormData {
   username: string;
@@ -63,9 +64,10 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-white">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-8 border border-gray-100">
         <div className="flex flex-col items-center mb-8">
+          <UserCircle2 className="w-16 h-16 text-blue-600 mb-4" strokeWidth={1.5} />
           <h1 className="text-2xl font-semibold text-gray-900">Enter Your Details</h1>
         </div>
 
