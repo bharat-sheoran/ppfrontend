@@ -1,35 +1,29 @@
 import React, { useState } from 'react';
-import { UserCircle2, ChevronDown } from 'lucide-react';
+import axios from 'axios';
+import { UserCircle2 } from 'lucide-react';
 
 interface FormData {
-  userId: string;
+  username: string;
   email: string;
   rollNumber: string;
-  username: string;
   dateOfBirth: string;
   textInput: string;
-  selectedOptions: string[];
+  numberInput: string;
 }
 
 function App() {
   const [formData, setFormData] = useState<FormData>({
-    userId: '',
+    username: '',
     email: '',
     rollNumber: '',
-    username: '',
     dateOfBirth: '',
     textInput: '',
-    selectedOptions: [],
+    numberInput: '',
   });
 
-  const [showResults, setShowResults] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  const options = [
-    { id: 'alphabets', label: 'Alphabets' },
-    { id: 'numbers', label: 'Numbers' },
-    { id: 'highest-alphabet', label: 'Highest alphabet' },
-  ];
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [responseData, setResponseData] = useState<any>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -39,215 +33,70 @@ function App() {
     }));
   };
 
-  const toggleOption = (optionId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedOptions: prev.selectedOptions.includes(optionId)
-        ? prev.selectedOptions.filter(id => id !== optionId)
-        : [...prev.selectedOptions, optionId]
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setShowResults(true);
-  };
+    setLoading(true);
+    setMessage('');
+    setResponseData(null);
 
-  const getProcessedText = () => {
-    let result = formData.textInput;
-    
-    if (formData.selectedOptions.includes('alphabets')) {
-      result = result.replace(/[^a-zA-Z]/g, '');
-    }
-    if (formData.selectedOptions.includes('numbers')) {
-      result = result.replace(/[^0-9]/g, '');
-    }
-    if (formData.selectedOptions.includes('highest-alphabet')) {
-      const alphabets = result.match(/[a-zA-Z]/g);
-      if (alphabets) {
-        result = alphabets.reduce((a, b) => a > b ? a : b);
-      }
-    }
-    
-    return result;
-  };
+    const userId = `${formData.username}_${formData.dateOfBirth.replace(/\//g, '')}`;
+    const numbers = formData.numberInput.match(/[0-9]/g)?.map(Number) || [];
+    const alphabets = formData.textInput.match(/[a-zA-Z]/g) || [];
 
-  if (showResults) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-8 border border-gray-100">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">Results</h2>
-          <div className="space-y-6">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Original Text</h3>
-              <p className="text-gray-900">{formData.textInput}</p>
-            </div>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-blue-600 mb-2">Processed Result</h3>
-              <p className="text-gray-900">{getProcessedText()}</p>
-            </div>
-            <button
-              onClick={() => setShowResults(false)}
-              className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 font-medium shadow-sm"
-            >
-              Back to Form
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    const payload = {
+      dob: formData.dateOfBirth.toString(),
+      username: formData.username,
+      userId,
+      collegeEmail: formData.email,
+      collegeRollNumber: formData.rollNumber,
+      numbers,
+      alphabets,
+    };
+
+    try {
+      const response = await axios.post('https://api.finnlet.com/bfhl', payload);
+      setMessage(response.data.message || 'Data submitted successfully!');
+      setResponseData(response.data);
+    } catch (error) {
+      setMessage('Failed to submit data. Please try again.');
+    }
+    setLoading(false);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-8 border border-gray-100">
         <div className="flex flex-col items-center mb-8">
           <UserCircle2 className="w-16 h-16 text-blue-600 mb-4" strokeWidth={1.5} />
           <h1 className="text-2xl font-semibold text-gray-900">Enter Your Details</h1>
-          <div className="h-1 w-12 bg-blue-600 rounded-full mt-4 mb-2"></div>
         </div>
 
+        {message && <p className="text-center text-sm text-red-500 mb-4">{message}</p>}
+
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-800 mb-1.5">
-              Username
-            </label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              required
-              placeholder="Choose a username"
-            />
-          </div>
+          <input type="text" name="username" value={formData.username} onChange={handleChange} placeholder="Username" required className="w-full p-2 border rounded" />
+          <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="College Email" required className="w-full p-2 border rounded" />
+          <input type="text" name="rollNumber" value={formData.rollNumber} onChange={handleChange} placeholder="Roll Number" required className="w-full p-2 border rounded" />
+          <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} required className="w-full p-2 border rounded" />
+          <input type="text" name="textInput" value={formData.textInput} onChange={handleChange} placeholder="Enter alphabets" required className="w-full p-2 border rounded" />
+          <input type="text" name="numberInput" value={formData.numberInput} onChange={handleChange} placeholder="Enter numbers" required className="w-full p-2 border rounded" />
 
-          <div>
-            <label htmlFor="userId" className="block text-sm font-medium text-gray-800 mb-1.5">
-              User ID
-            </label>
-            <input
-              type="text"
-              id="userId"
-              name="userId"
-              value={formData.userId}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              required
-              placeholder="Enter your user ID"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-800 mb-1.5">
-              College Email ID
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              required
-              placeholder="name@college.edu"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="rollNumber" className="block text-sm font-medium text-gray-800 mb-1.5">
-              College Roll Number
-            </label>
-            <input
-              type="text"
-              id="rollNumber"
-              name="rollNumber"
-              value={formData.rollNumber}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              required
-              placeholder="Enter roll number"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-800 mb-1.5">
-              Date of Birth
-            </label>
-            <input
-              type="date"
-              id="dateOfBirth"
-              name="dateOfBirth"
-              value={formData.dateOfBirth}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="textInput" className="block text-sm font-medium text-gray-800">
-              Text Input
-            </label>
-            <input
-              type="text"
-              id="textInput"
-              name="textInput"
-              value={formData.textInput}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              placeholder="Enter text to process"
-              required
-            />
-          </div>
-
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-800 mb-1.5">
-              Select Options
-            </label>
-            <button
-              type="button"
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-left flex justify-between items-center"
-            >
-              <span>
-                {formData.selectedOptions.length
-                  ? `${formData.selectedOptions.length} selected`
-                  : 'Select options'}
-              </span>
-              <ChevronDown className="w-4 h-4" />
-            </button>
-            
-            {isDropdownOpen && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
-                {options.map(option => (
-                  <label
-                    key={option.id}
-                    className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.selectedOptions.includes(option.id)}
-                      onChange={() => toggleOption(option.id)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="ml-2">{option.label}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            className="w-full mt-6 bg-blue-600 text-white py-2.5 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 font-medium shadow-sm"
-          >
-            Process Text
+          <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded">
+            {loading ? 'Submitting...' : 'Submit'}
           </button>
         </form>
       </div>
+
+      {responseData && (
+        <div className="bg-gray-50 mt-6 p-4 rounded-lg w-full max-w-md border border-gray-200">
+          <h3 className="text-lg font-medium text-gray-700">Response Data</h3>
+          <p><strong>User ID:</strong> {responseData.userId}</p>
+          <p><strong>Email:</strong> {responseData.collegeEmail}</p>
+          <p><strong>Roll Number:</strong> {responseData.collegeRollNumber}</p>
+          <p><strong>Numbers:</strong> {responseData.numbers.join(', ')}</p>
+          <p><strong>Alphabets:</strong> {responseData.alphabets.join(', ')}</p>
+        </div>
+      )}
     </div>
   );
 }
